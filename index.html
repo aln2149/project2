@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+	<head>
+		<title>NYC Trash Complaints</title><!-- make your own with https://www.favicon.cc/-->
+        <link href="../favicon.ico" rel="shortcut icon" type="image/x-icon" />
+		<script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+		<style>
+			body {
+			  font-family: "Helvetica", Helvetica, Arial, sans-serif;
+			  margin-left:40px;
+			  font-weight: 200;
+			  font-size: 18px;
+			}
+			html,body {
+			  -webkit-touch-callout: none;
+			  -webkit-user-select: none;
+			  -khtml-user-select: none;
+			  -moz-user-select: none;
+			  -ms-user-select: none;
+			  user-select: none;
+			}
+			text {
+			  cursor: default;
+			}
+			h1 {
+			  font-weight: 400;
+			}
+			h2 {
+				font-weight:400;
+			}
+			#chart1, #chart2 {
+			  margin-bottom: 20px;
+			}
+			text {
+			  font-size: 10px;
+			}
+			.circle {
+			  stroke: #000;
+			}
+			.rect {
+			  stroke: #000;
+			}
+			.label {
+			  fill: #777;
+		
+			}
+
+			.rect:hover {
+				fill: grey;
+			}
+			
+			#tooltip {
+				position: absolute;
+				width: 200px;
+				height: auto;
+				padding: 10px;
+				background-color: white;
+				-webkit-border-radius: 10px;
+				-moz-border-radius: 10px;
+				border-radius: 10px;
+				-webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				pointer-events: none;
+			}
+			
+			.hidden {
+				display: none;
+			}
+			
+			#tooltip p {
+				margin: 0;
+				font-family: sans-serif;
+				font-size: 16px;
+				line-height: 20px;
+			}			
+			
+			</style>
+	</head>	
+	<body>
+		<h1>A look into trash complaints per NYC borough</h1>
+		<i>click on the circle to open a bar graph breakdown of each borough.</i></p>
+		
+		<div id="chart1"></div>
+		<i>hoover over the bars to see which type of complaint was filled. click to descend and ascend.</i></p>
+			
+		<div id="chart2"></div>
+		</div>
+		
+		<i>our furry neighbors profit from our overflowing trash, click on video to see pizza rats 15 minutes of fame.</i></p>
+		<div id="theater" class="hidden">
+		  <iframe width="560" height="315" src="https://www.youtube.com/embed/UPXUG8q4jKU?autoplay=1&loop=1&playlist=UPXUG8q4jKU" frameborder="0" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+		  <canvas id="canvas"></canvas>
+		 
+
+		<div id="tooltip" class="hidden">
+			<p><span id="value"></span></p>
+		</div>			
+		
+		<script type="text/javascript"> 
+            //this code allows us to draw multiple charts using the same function.
+			var binGroups;
+			var rawBins = d3.csv("Public_Recycling_Bins.csv")
+				.then(function(data) {
+					binGroups = d3.nest()
+						.key(function(d) { return d.Borough })
+						.key(function(d) { return d["Site type"]})
+						.rollup(function(v) { return v.length })
+						.object(data);
+				})
+			
+            d3.csv("borough_dataset.csv")
+            .then(function(data){
+                
+                //below we call the chart 5 times, each with a different column, and we will see 5 charts, 1 for each column
+                drawChart(data,"Bins")
+            })
+            
+            //below is the code for drawing a basic chart, it takes in the data, and the selection of a column
+            //the only change is that we are passing in 2 variables - the data and the column that we will use
+            //you will see the column variable being used in the drawing part after .append("circle")
+            function drawChart(data,column,radius,startColor,endColor){
+                var w = 500
+                var h = 500
+                var padding = 60
+				
+                //our svg
+                var svg = d3.select("#chart1")
+                            .append("svg")							
+                            .attr("width",w+padding)
+                            .attr("height",h+padding)
+                
+				var g = svg.append("g")
+					.attr("transform", "translate("+padding+","+padding/2+")")					
+				
+                //all this is the same as previous file
+                var xScale = d3.scaleBand()
+					.domain(["Brooklyn","Manhattan","Bronx","Queens","Staten Island"])
+					.range([0,w])
+                var yScale = d3.scaleLinear()
+					.domain([0,200])
+					.range([h,0])					
+					
+               var cScale = d3.scaleLinear().domain([0,200]).range([startColor,endColor])
+               
+                g.append("g")
+    				.attr("class", "axis")
+                    .attr("transform", "translate(0," + (h) + ")")
+                    .call(d3.axisBottom(xScale));
+					
+                g.append("g")
+                    .attr("class", "axis")
+    				.call(d3.axisLeft(yScale));   
+
+                //START PAYING ATTENTION HERE
+                //you have seen most of this before too. 
+                //notice that column is the dynamic variable that we pass in when we call the function
+                g.selectAll("circle")
+                    .data(data)
+                    .enter()
+                    .append("circle")
+                    .attr("class","circle")
+                    .attr("cy",function(d){
+                        return yScale(d[column])//this line uses the column variable you passed in in line 22 - 26
+                    })
+                    .attr("cx",function(d,i){
+                        return xScale(d.Borough) + xScale.bandwidth()/2
+                    })
+                    .attr("r",function(d,i){
+                    	return Math.floor(Math.random()*6)+5
+                    })
+					.attr("fill",function(d,i){
+						var redColor = Math.floor(Math.random() * 200)
+						var greenColor = Math.floor(Math.random() * 200)
+						var blueColor = Math.floor(Math.random() * 200)
+						var rgbValue = 'rgb(' + redColor + ',' + greenColor + ',' + blueColor + ')'
+						return rgbValue
+					})
+                    .on("click",function(d){
+						var circle = d3.select(this);
+                        drawNewBarChart(d, circle)
+                    })
+                
+                //label is the same as before from week 4   
+                g.selectAll(".label")
+                    .data(data)
+                    .enter()
+                    .append("text")
+                    .attr("class","label")
+                    .text(function(d){
+                        return d[column]})//here is the column used again for text content
+                    .attr("y",function(d){
+                        return yScale(d[column])-10//here is the column used again for placement
+                    })
+                    .attr("x",function(d,i){
+                        return xScale(d.Borough) + xScale.bandwidth()/2
+                    })
+                }
+                
+                function drawNewBarChart(data, circle){
+                    d3.select("#chart2 svg").remove()
+                    
+                    var w = 500
+                    var h = 300
+					var margin = 200;
+                    var barWidth = 50
+                    var svg = d3.select("#chart2")
+						.append("svg")
+						.attr("width",w)
+						.attr("height",h)
+						.attr("margin",margin)
+					
+					var siteTypeEntries = d3.entries(binGroups[data.Borough])
+						.sort(function(a, b) {
+							if (sortAscending) {
+								return d3.ascending(a.value, b.value);
+							} else {
+								return d3.descending(a.value, b.value);
+							}
+						});
+                    
+					var xScale = d3.scaleBand()
+							.domain(d3.range(siteTypeEntries.length))
+							.rangeRound([0, w])
+							.paddingInner(0.05);
+							
+                    var yScale = d3.scaleLinear()
+						.domain([0,d3.max(siteTypeEntries, function(d) { return d.value })])
+						.range([0,h])						
+						
+                    svg.selectAll("rect")
+						.data(siteTypeEntries)
+						.enter()
+						.append("rect")
+						.attr("class", "rect")
+						.attr("x",function(d,i){
+							return xScale(i)
+						})
+						.attr("y",function(d,i){
+							return 0
+						})
+						.attr("width",xScale.bandwidth())
+						.attr("height",function(d,i){
+							return yScale(d.value)
+						})
+						.attr("fill", circle.attr("fill"))   
+						.on("mouseover", function(d) {
+							//Update the tooltip position and value
+							d3.select("#tooltip")
+								.style("left", d3.event.pageX + "px")
+								.style("top", d3.event.pageY + "px")						
+								.select("#value")
+								.text(d.key + " (" + d.value + ")");
+
+							//Show the tooltip
+							d3.select("#tooltip").classed("hidden", false);
+
+						})
+						.on("mouseout", function() {
+							//Hide the tooltip
+							d3.select("#tooltip").classed("hidden", true);
+							
+						})
+						.on("click", function() {
+							sortBars(svg, xScale);
+							d3.select("#theater").classed("hidden", false);
+						});
+                }	
+                 
+                    
+				//Define sort order flag
+				var sortAscending = false;
+				
+				//Define sort function
+				var sortBars = function(svg, xScale) {
+
+					//Flip value of sortOrder
+					sortAscending = !sortAscending;
+
+					svg.selectAll("rect")
+					   .sort(function(a, b) {
+							if (sortAscending) {
+								return d3.ascending(a.value, b.value);
+							} else {
+								return d3.descending(a.value, b.value);
+							}
+						})
+					   .transition()
+					   .delay(function(d, i) {
+						   return i * 50;
+					   })
+					   .duration(1000)
+					   .attr("x", function(d, i) {
+							return xScale(i);
+					   });
+
+				};					
+		</script>
+	</body>
+</html>
